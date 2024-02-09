@@ -3,6 +3,11 @@ const mongoose = require("mongoose");
 
 // messageId, senderId, recipentId, text, viewed: false
 const MessageSchema = new mongoose.Schema({
+    senderName: {
+        type: String,
+        required: [true, "Please provide a senderName!"],
+        unique: false,
+      },
     senderId: {
         type: String,
         required: [true, "Please provide a senderId!"],

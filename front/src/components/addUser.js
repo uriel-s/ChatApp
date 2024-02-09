@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate  } from "react-router-dom";
 import Axios from "axios";
 import './addUser.css';
 
@@ -29,16 +29,20 @@ const AddUser = () => {
         password: password
       }
     }) 
-    .then(response => { console.log(response);
+    .then(response => { 
         let path = '/chat'; 
         navigate(path ,{ state: { id:response.data.id, name: response.data.name}} );
       })
       .catch(error => {
-        alert('did not work')
+        alert(error.response.data.message)
       });
     }
   };
-  
+
+  const returnToLogIn = () => {
+    navigate('/');
+  };
+
   return (
     <div className="container2">
       <form action="">
@@ -53,7 +57,7 @@ const AddUser = () => {
             />{" "}
           </div>
         </div>
-    
+        <br/>
         <div className="col-12 mb-4">
           {" "}
           <input
@@ -63,6 +67,7 @@ const AddUser = () => {
             onChange={(e) => setEmail(e.target.value)}
           />{" "}
         </div>
+        <br/>
         <div className="col-12 mb-4">
           {" "}
           <input
@@ -72,11 +77,18 @@ const AddUser = () => {
             onChange={(e) => setPassword(e.target.value)}
           />{" "}
         </div>
+        <br/>
         <div className="row">
           <div className="col-12 mb-4">
-            <div className="btn btn-primary d-block" onClick={addToDatabase}>
+            <button className="btn btn-primary d-block" onClick={addToDatabase}>
               ADD
-            </div>
+            </button>
+          </div>
+          <br/>
+          <div className="col-12 mb-4">
+            <button className="btn btn-primary d-block" onClick={returnToLogIn}>
+              return to log in page
+            </button>
           </div>
         </div>
       </form>

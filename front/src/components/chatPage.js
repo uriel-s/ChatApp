@@ -40,6 +40,20 @@ function ChatPage() {
           });
     }, [users]);
 
+
+    const onButtonClicklogOut = () => {
+        Axios.post(`http://localhost:3000/logout`)
+          .then(response => {
+            let path = '/'; // Redirect to login page
+            navigate(path);
+          })
+          .catch(error => {
+            console.error(error);
+            alert('Error logging out');
+          });
+      };
+
+
     const onButtonClickDeleteUser = () => {
         Axios.delete(`http://localhost:3000/delete/${id}`)
          .then(response => {
@@ -74,6 +88,7 @@ function ChatPage() {
         // Authenticate user upon component mount
         socket.emit('authenticate', id); // Replace `userId` with the actual user ID
       }, []);
+
       useEffect(() => {
         // TODO: test if we can delete messeges dependecy
         socket.on('message', (message) => {
@@ -87,7 +102,7 @@ function ChatPage() {
       }, [messages]);
     
       const sendMessage = () => {
-        socket.emit('sendMessage', { text: messageText, senderId: id, recipientId: recipient });
+        socket.emit('sendMessage', { text: messageText, senderName: name ,senderId: id, recipientId: recipient });
         setMessageText('');
       };
 
@@ -99,6 +114,15 @@ function ChatPage() {
             <p>Your user Name is: {location.state.name}</p>
             <p>current recipientId is: {recipient}</p>
       </div>
+      <br></br>
+      <div className={"inputContainer"}>
+        <input
+            className={"inputButton"}
+            type="button"
+            onClick={onButtonClicklogOut}
+            value={"Log Out"} />
+        </div>
+        <br></br>
         <div className={"inputContainer"}>
         <input
             className={"inputButton"}
@@ -113,7 +137,7 @@ function ChatPage() {
       <h1>Real-Time Chat App</h1>
       <div className="messages">
         {messages.map((message, index) => (
-          <Message key={index} username={message.senderId} text={message.text} />
+          <Message key={message.id} username={message.senderName} text={message.text} />
         ))}
       </div>
       <div className="input-box">
@@ -130,26 +154,7 @@ function ChatPage() {
 
 
 
-
-
         </div>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
     </div>
