@@ -80,22 +80,41 @@ app.get("/getAllusers", (req, res) => {
     });
 });
 
-app.post("/getMessage", (req, res) => {
-  const { recipientId, senderId } = req.body;
+app.post("/getMessage", async (req, res) => {
+  try {
+    const { recipientId, senderId } = req.body;
 
-  Message.find({
-    $or: [
-      { $and: [{ senderId: recipientId }, { recipientId: senderId }] }, // both sides of messages
-      { $and: [{ senderId: senderId }, { recipientId: recipientId }] },
-    ],
-  })
-    .then((messages) => {
-      res.status(200).json(messages);
-    })
-    .catch((error) => {
-      res.status(500).json({ message: "Error fetching users", error: error });
+    // Find messages
+    const messages = await Message.find({
+      $or: [
+        { $and: [{ senderId: recipientId }, { recipientId: senderId }] }, // Messages from recipient to sender
+        { $and: [{ senderId: senderId }, { recipientId: recipientId }] }, // Messages from sender to recipient
+      ],
     });
+
+    // Check if messages exist
+    if (messages.length > 0) {
+      // Update messages as viewed where the current user is the recipient
+      await Message.updateMany(
+        {
+          recipientId: senderId, // The current user should be the recipient
+          senderId: recipientId, // The other user is the sender
+          isViewed: false, // Update only the messages that are not yet viewed
+        },
+        {
+          $set: { isViewed: true }
+        },   { writeConcern: { j: true, wtimeout: 1000, w: 'majority' } }
+      );
+    }
+
+    // Return the found messages
+    res.status(200).json(messages);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Error fetching messages", error: error });
+  }
 });
+
 
 app.post("/login", (req, res) => {
   const { email, password } = req.body;
@@ -238,6 +257,7 @@ server.listen(port, () => {
         });
     });
 
+    
     // socket.on('onMessageView', ({ messageId, recipientId }) => {
     //   const recipientSocket = userSockets[recipientId];
 

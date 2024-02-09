@@ -1,10 +1,12 @@
 import React from 'react';
 
-const Message = ({ username, text }) => {
+const Message = ({ senderName, username, text, view }) => {
   return (
     <div className="message">
-      <p className="message-username">{username} : 
-     {text}</p>
+      <p className="message-username">
+        {senderName}: {text}{' '}
+        {senderName === username && (view ? 'Is viewed? Yes' : 'Is viewed? No')}
+      </p>
     </div>
   );
 };

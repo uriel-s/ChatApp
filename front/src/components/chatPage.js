@@ -35,6 +35,7 @@ function ChatPage() {
             onClick={() => {
                 setRecipient(item['_id']);
                 fetchMessages(item['_id']);
+                
             }}
             >{item['name']}</button></li>;
           });
@@ -75,7 +76,7 @@ function ChatPage() {
             recipientId: recipentId
           }
         }) 
-        .then(response => {
+        .then(response => {console.log(response.data);
             setMessages([...response.data]);      
         })
         .catch(error => {
@@ -106,6 +107,9 @@ function ChatPage() {
         setMessageText('');
       };
 
+
+   
+
     return (
       <div>
          <div>
@@ -130,14 +134,14 @@ function ChatPage() {
             onClick={onButtonClickDeleteUser}
             value={"Delete Your User"} />
         </div>
-        <br></br>
+        <br/>
         <div>
           {userList}
          <div className="App">
       <h1>Real-Time Chat App</h1>
       <div className="messages">
         {messages.map((message, index) => (
-          <Message key={message.id} username={message.senderName} text={message.text} />
+          <Message key={message.id} senderName={message.senderName} userName={name} text={message.text} view={message.isViewed}/>
         ))}
       </div>
       <div className="input-box">
