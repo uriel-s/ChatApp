@@ -66,7 +66,7 @@ function ChatPage() {
         });
       }
 
-
+      
       const fetchMessages = (recipentId) => {
         Axios({
             method: 'post',
@@ -76,39 +76,79 @@ function ChatPage() {
             recipientId: recipentId
           }
         }) 
-        .then(response => {console.log(response.data);
-            setMessages([...response.data]);      
+        .then(response => {
+           const msgs = (response.data || []);
+           setMessages([...msgs]);  
         })
         .catch(error => {
           console.error('Error fetching messages:', error);
         });
       };
 
+      useEffect(() => {
+        const newViewedMessageIds = [];
+        messages.forEach(message => {
+            if(!message.isViewed && message.senderId != id && message.senderId === recipient){
+                newViewedMessageIds.push(message._id);
+            }
+        });
+
+        if(newViewedMessageIds.length > 0){
+            socket.emit('messageViewed', { messageIds: newViewedMessageIds, senderId: recipient });
+        }
+
+      }, [messages]);
+
+
 
       useEffect(() => {
         // Authenticate user upon component mount
-        socket.emit('authenticate', id); // Replace `userId` with the actual user ID
+        socket.emit('authenticate', id); 
       }, []);
 
       useEffect(() => {
-        // TODO: test if we can delete messeges dependecy
         socket.on('message', (message) => {
-        //   const { senderId, messageId } = message;
-        //   socket.emit('onMessageView', { senderId, messageId });
-            // emit view message
 
-            console.log(message)
-          setMessages([...messages, message]);
-        });
-      }, [messages]);
+            console.log('before set message in line 118', message);
+
+            setMessages((prevMessageState) => {
+                const found = prevMessageState.find((msg) => msg._id === message._id);
+                console.log("found", found);
+                console.log("message.senderId === id", message.senderId === id);
+                console.log("message.senderId === recipient", message.senderId === recipient);
+
+                if((message.recipientId === id || message.senderId === recipient || message.senderId === id) && !found){
+                    console.log('inn if fond set messages in line 118', messages);
+                    return [...prevMessageState, message];
+                }
+                return prevMessageState;
+            })
+        }); 
+      }, []);
     
       const sendMessage = () => {
         socket.emit('sendMessage', { text: messageText, senderName: name ,senderId: id, recipientId: recipient });
         setMessageText('');
       };
 
+    const handleModifyMessageViewed = ({ messageIds }) => {
+        setMessages((prevMessageState) => {
+            return prevMessageState.map((msg) =>
+            messageIds.includes(msg._id) ? { ...msg, isViewed: true } : msg)
+        })
+    };
 
-   
+      useEffect(() => {
+        socket.on('modifyMessageViewed', handleModifyMessageViewed);
+      
+        // Clean up on component unmount
+        // return () => {
+        //   socket.off('modifyMessageViewed');
+        // };
+      }, []); // Only re-run the effect if `socket` changes
+
+
+
 
     return (
       <div>
@@ -141,7 +181,7 @@ function ChatPage() {
       <h1>Real-Time Chat App</h1>
       <div className="messages">
         {messages.map((message, index) => (
-          <Message key={message.id} senderName={message.senderName} userName={name} text={message.text} view={message.isViewed}/>
+          <Message key={message.id} senderName={message.senderName} name={name} text={message.text} isViewed={message.isViewed}/>
         ))}
       </div>
       <div className="input-box">

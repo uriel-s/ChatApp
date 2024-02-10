@@ -9,10 +9,11 @@ const http = require("http");
 const dbConnect = require("./dbConnect");
 const User = require("./model/userModel");
 const Message = require("./model/messageModel");
+const server = http.Server(app);
 
 app.use(
   cors({
-    origin: "*",
+    origin: "*", //allaow any url to connect
   })
 );
 app.use(express.json());
@@ -196,7 +197,7 @@ app.delete("/delete/:id", (req, res) => {
 
 
 
-const server = http.Server(app);
+
 
 server.listen(port, () => {
   console.log(`Example app listening at http://localhost:${port}`);
@@ -215,63 +216,70 @@ server.listen(port, () => {
       userSockets[userId] = socket; // Store the user's socket
     });
 
+    // const activeConversations = {};
+    // socket.on('activeConversation', ({ userId, recipentId }) => { console.log("activeConversation",userId, recipentId );
+    //   // Track the active conversation for this socket
+    //   activeConversations[socket.id] = { userId, recipentId };
+    // });
+    
     socket.on("sendMessage", ({ text, senderName, senderId, recipientId }) => {
       console.log(`Received message for user ${recipientId}:`, text);
       const recipientSocket = userSockets[recipientId];
       const senderSocket = userSockets[senderId];
-
-      // user a send message to user b ----> both online
-      // store message in mongo { messageId, senderId, recipentId, text, viewed: false }
-      new Message({
-        senderName,
-        senderId,
-        text,
-        recipientId,
-      })
-        .save({
-          writeConcern: {
-            j: true,
-            wtimeout: 1000,
-          },
+      
+        // If the conversation is not active, leave isViewed as it is
+        new Message({
+          senderName,
+          senderId,
+          text,
+          recipientId,
         })
-        .then((messageObject) => {
-          console.log(messageObject);
-          senderSocket.emit("message", {
-            text,
-            senderName,
-            username: senderId,
-            id: messageObject.id,
-            isViewed: messageObject.isViewed,
-          }); // Send the message to the sender
-          if (recipientSocket) {
-            recipientSocket.emit("message", {
+          .save({
+            writeConcern: {
+              j: true,
+              wtimeout: 1000,
+            },
+          })
+          .then((messageObject) => {
+            console.log(messageObject);
+            senderSocket.emit("message", {
               text,
               senderName,
-              username: senderId,
-              id: messageObject.id,
-              isViewed: messageObject.isViewed,
-            }); // Send the message to the recipient
-          } else {
-            console.log(`User ${recipientId} not found or not connected`);
+              senderId,
+              recipientId,
+              _id: messageObject.id,
+              isViewed: messageObject.isViewed, // Leave isViewed as it is
+            }); // Send the message to the sender
+            if (recipientSocket) {
+              recipientSocket.emit("message", {
+                text,
+                senderName,
+                senderId,
+                recipientId,
+                _id: messageObject.id,
+                isViewed: messageObject.isViewed, // Leave isViewed as it is
+              }); // Send the message to the recipient
+            } else {
+              console.log(`User ${recipientId} not found or not connected`);
+            }
+          });
+      
+    });
+    
+    socket.on('messageViewed', async ({ messageIds, senderId }) => {
+      try {
+        console.log('in messageViewed',messageIds, senderId);
+          // Emit an event back to the sender to notify them that the message has been viewed
+          const senderSocket = userSockets[senderId];
+          if (senderSocket) {
+            senderSocket.emit('modifyMessageViewed', { messageIds });
           }
-        });
+      } catch (error) {
+        console.error('Error marking message as viewed:', error);
+      }
     });
 
-    
-    // socket.on('onMessageView', ({ messageId, recipientId }) => {
-    //   const recipientSocket = userSockets[recipientId];
-
-    //   if (recipientSocket) {
-    //     recipientSocket.emit('notifyOnMessageView', { messageId }); // Send the message to the recipient
-    //   } else {
-    //     console.log(`User ${recipientId} not found or not connected`);
-    //   }
-    // });
-
-    // socket.on('sendMessage', (message) => {
-    //   console.log('messege');
-    //     io.emit('message', message); // Broadcast the message to all connected clients
-    // });
+ 
 
     socket.on("disconnect", () => {
       console.log("Client disconnected");
@@ -285,3 +293,6 @@ server.listen(port, () => {
     });
   });
 });
+
+
+
