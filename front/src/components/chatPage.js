@@ -123,6 +123,8 @@ function ChatPage() {
                 return prevMessageState;
             })
         }); 
+
+        return () => socket.off('message');
       }, []);
     
       const sendMessage = () => {
@@ -139,6 +141,8 @@ function ChatPage() {
 
       useEffect(() => {
         socket.on('modifyMessageViewed', handleModifyMessageViewed);
+
+        return () => socket.off('modifyMessageViewed');
       }, []); 
 
 
