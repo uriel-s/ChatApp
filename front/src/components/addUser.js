@@ -15,11 +15,11 @@ const AddUser = () => {
     return true;
   };
 
-    const navigate = useNavigate();
-  const addToDatabase = () => {
+  const navigate = useNavigate();
+  const addToDatabase = (event) => {
+    event.preventDefault();
     if (!isValid()) {
     } else {
-        console.log("uri = " ); 
       Axios({
         method: 'post',
         url: "http://localhost:3000/register",
@@ -31,7 +31,6 @@ const AddUser = () => {
     }) 
     .then(response => {
         let path = '/chat'; 
-        console.log("res = ",response );
         navigate(path ,{ state: { id:response.data.id, name: response.data.name}} );
       })
       .catch(error => {
@@ -78,7 +77,7 @@ const AddUser = () => {
         </div>
         <div className="row">
           <div className="col-12 mb-4">
-            <button className="btn btn-primary d-block" onClick={addToDatabase}>
+            <button className="btn btn-primary d-block" onClick={(e) => addToDatabase(e)}>
               ADD
             </button>
           </div>

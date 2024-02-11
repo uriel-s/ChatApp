@@ -42,6 +42,12 @@ function ChatPage() {
     }, [users]);
 
 
+    const messageList = useMemo(() => {
+        return messages.map((message, index) => (
+            <Message key={message.id} senderName={message.senderName} name={name} text={message.text} isViewed={message.isViewed}/>
+          ));
+    }, [messages]);
+
     const onButtonClicklogOut = () => {
         Axios.post(`http://localhost:3000/logout`)
           .then(response => {
@@ -108,14 +114,8 @@ function ChatPage() {
 
       useEffect(() => {
         socket.on('message', (message) => {
-
-            console.log('before set message in line 118', message);
-
             setMessages((prevMessageState) => {
                 const found = prevMessageState.find((msg) => msg._id === message._id);
-                console.log("found", found);
-                console.log("message.senderId === id", message.senderId === id);
-                console.log("message.senderId === recipient", message.senderId === recipient);
 
                 if(( message.senderId === recipient || message.senderId === id) && !found){
                     return [...prevMessageState, message];
@@ -174,9 +174,7 @@ function ChatPage() {
          <div className="App">
       <h1>Real-Time Chat App</h1>
       <div className="messages">
-        {messages.map((message, index) => (
-          <Message key={message.id} senderName={message.senderName} name={name} text={message.text} isViewed={message.isViewed}/>
-        ))}
+        {messageList}
       </div>
       <div className="input-box">
         <input
@@ -185,7 +183,7 @@ function ChatPage() {
           onChange={(e) => setMessageText(e.target.value)}
           placeholder="Type your message..."
         />
-        <button onClick={sendMessage}>Send</button>
+        <button disabled={!recipient}  onClick={sendMessage}>Send</button>
       </div>
     </div>
 

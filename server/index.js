@@ -250,13 +250,13 @@ server.listen(port, () => {
 
     socket.on("messageViewed", async ({ messageIds, senderId }) => {
       try {
-        console.log("in messageViewed", messageIds, senderId);
         // Emit an event back to the sender to notify them that the message has been viewed
         const senderSocket = userSockets[senderId];
         if (senderSocket) {
        
           // Check if messages exist
           if (messageIds.length > 0) {
+            
             await Message.updateMany(
               {
                 _id: { $in: messageIds }, 
