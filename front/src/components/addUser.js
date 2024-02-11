@@ -19,6 +19,7 @@ const AddUser = () => {
   const addToDatabase = () => {
     if (!isValid()) {
     } else {
+        console.log("uri = " ); 
       Axios({
         method: 'post',
         url: "http://localhost:3000/register",
@@ -30,6 +31,7 @@ const AddUser = () => {
     }) 
     .then(response => {
         let path = '/chat'; 
+        console.log("res = ",response );
         navigate(path ,{ state: { id:response.data.id, name: response.data.name}} );
       })
       .catch(error => {

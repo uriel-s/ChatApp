@@ -51,8 +51,8 @@ app.post("/register", (req, res) => {
                 wtimeout: 1000,
               },
             })
-            .then((e) => {console.log(user);
-              res.status(201).json({ id: user._id, name: user.name });
+            .then((e) => {console.log("e = ",e);
+              res.status(201).json({ id: e._id, name: e.name });
             })
             .catch((error) => {
               res.status(500).send({
