@@ -30,35 +30,36 @@ app.use(
 );
 
 app.post("/register", (req, res) => {
-  bcrypt.hash(req.body.password, 10)
+  bcrypt
+    .hash(req.body.password, 10)
     .then((hashedPassword) => {
       const user = new User({
         name: req.body.name,
         email: req.body.email,
         password: hashedPassword,
       });
-      User.findOne({ email: req.body.email })
-      .then((find) => {
+      User.findOne({ email: req.body.email }).then((find) => {
         if (find) {
           res.status(400).send({
             message: "email already exist",
           });
-        }else{
-        user.save({
-            writeConcern: {
-              j: true,
-              wtimeout: 1000,
-            },
-          })
-          .then((e) => {
-            res.status(201).json({ id: user.id, name: user.name });
-          })
-          .catch((error) => {
-            res.status(500).send({
-              message: "Error creating user",
-              error,
+        } else {
+          user
+            .save({
+              writeConcern: {
+                j: true,
+                wtimeout: 1000,
+              },
+            })
+            .then((e) => {console.log(user);
+              res.status(201).json({ id: user._id, name: user.name });
+            })
+            .catch((error) => {
+              res.status(500).send({
+                message: "Error creating user",
+                error,
+              });
             });
-          });
         }
       });
     })
@@ -85,26 +86,25 @@ app.post("/getMessage", async (req, res) => {
   try {
     const { recipientId, senderId } = req.body;
 
-    // Find messages
+    // Find messages mongoose function
     const messages = await Message.find({
       $or: [
         { $and: [{ senderId: recipientId }, { recipientId: senderId }] }, // Messages from recipient to sender
         { $and: [{ senderId: senderId }, { recipientId: recipientId }] }, // Messages from sender to recipient
       ],
     });
-
-    // Check if messages exist
     if (messages.length > 0) {
       // Update messages as viewed where the current user is the recipient
       await Message.updateMany(
         {
           recipientId: senderId, // The current user should be the recipient
           senderId: recipientId, // The other user is the sender
-          isViewed: false, // Update only the messages that are not yet viewed
+          isViewed: false, 
         },
         {
-          $set: { isViewed: true }
-        },   { writeConcern: { j: true, wtimeout: 1000, w: 'majority' } }
+          $set: { isViewed: true },
+        },
+        { writeConcern: { j: true, wtimeout: 1000, w: "majority" } }
       );
     }
 
@@ -115,7 +115,6 @@ app.post("/getMessage", async (req, res) => {
     res.status(500).json({ message: "Error fetching messages", error: error });
   }
 });
-
 
 app.post("/login", (req, res) => {
   const { email, password } = req.body;
@@ -147,13 +146,9 @@ app.post("/login", (req, res) => {
     });
 });
 
-
 app.post("/logout", (req, res) => {
-  // Perform logout logic here (e.g., invalidate session, delete token, etc.)
-  // For simplicity, we will just send a success response
   res.status(200).send({ message: "Logout successful" });
 });
-
 
 // Get a single user by ID
 app.get("/users/:id", (req, res) => {
@@ -192,13 +187,6 @@ app.delete("/delete/:id", (req, res) => {
     });
 });
 
-
-
-
-
-
-
-
 server.listen(port, () => {
   console.log(`Example app listening at http://localhost:${port}`);
   const io = socketIo(server, {
@@ -216,70 +204,77 @@ server.listen(port, () => {
       userSockets[userId] = socket; // Store the user's socket
     });
 
-    // const activeConversations = {};
-    // socket.on('activeConversation', ({ userId, recipentId }) => { console.log("activeConversation",userId, recipentId );
-    //   // Track the active conversation for this socket
-    //   activeConversations[socket.id] = { userId, recipentId };
-    // });
-    
+
     socket.on("sendMessage", ({ text, senderName, senderId, recipientId }) => {
       console.log(`Received message for user ${recipientId}:`, text);
       const recipientSocket = userSockets[recipientId];
       const senderSocket = userSockets[senderId];
-      
-        // If the conversation is not active, leave isViewed as it is
-        new Message({
-          senderName,
-          senderId,
-          text,
-          recipientId,
+
+      // If the conversation is not active, leave isViewed as it is
+      new Message({
+        senderName,
+        senderId,
+        text,
+        recipientId,
+      })
+        .save({
+          writeConcern: {
+            j: true,
+            wtimeout: 1000,
+          },
         })
-          .save({
-            writeConcern: {
-              j: true,
-              wtimeout: 1000,
-            },
-          })
-          .then((messageObject) => {
-            console.log(messageObject);
-            senderSocket.emit("message", {
+        .then((messageObject) => {
+          console.log(messageObject);
+          senderSocket.emit("message", {
+            text,
+            senderName,
+            senderId,
+            recipientId,
+            _id: messageObject.id,
+            isViewed: messageObject.isViewed, // Leave isViewed as it is
+          }); // Send the message to the sender
+          if (recipientSocket) {
+            recipientSocket.emit("message", {
               text,
               senderName,
               senderId,
               recipientId,
               _id: messageObject.id,
               isViewed: messageObject.isViewed, // Leave isViewed as it is
-            }); // Send the message to the sender
-            if (recipientSocket) {
-              recipientSocket.emit("message", {
-                text,
-                senderName,
-                senderId,
-                recipientId,
-                _id: messageObject.id,
-                isViewed: messageObject.isViewed, // Leave isViewed as it is
-              }); // Send the message to the recipient
-            } else {
-              console.log(`User ${recipientId} not found or not connected`);
-            }
-          });
-      
-    });
-    
-    socket.on('messageViewed', async ({ messageIds, senderId }) => {
-      try {
-        console.log('in messageViewed',messageIds, senderId);
-          // Emit an event back to the sender to notify them that the message has been viewed
-          const senderSocket = userSockets[senderId];
-          if (senderSocket) {
-            senderSocket.emit('modifyMessageViewed', { messageIds });
+            }); // Send the message to the recipient
+          } else {
+            console.log(`User ${recipientId} not found or not connected`);
           }
-      } catch (error) {
-        console.error('Error marking message as viewed:', error);
-      }
+        });
     });
 
- 
+    socket.on("messageViewed", async ({ messageIds, senderId }) => {
+      try {
+        console.log("in messageViewed", messageIds, senderId);
+        // Emit an event back to the sender to notify them that the message has been viewed
+        const senderSocket = userSockets[senderId];
+        if (senderSocket) {
+       
+          // Check if messages exist
+          if (messageIds.length > 0) {
+            await Message.updateMany(
+              {
+                _id: { $in: messageIds }, 
+                isViewed: false,
+              },
+              {
+                $set: { isViewed: true },
+              },
+              { writeConcern: { j: true, wtimeout: 1000, w: "majority" } }
+            );
+          }
+
+          senderSocket.emit("modifyMessageViewed", { messageIds });
+        }
+      } catch (error) {
+        console.error("Error marking message as viewed:", error);
+      }
+    });
 
     socket.on("disconnect", () => {
       console.log("Client disconnected");
@@ -293,6 +288,3 @@ server.listen(port, () => {
     });
   });
 });
-
-
-

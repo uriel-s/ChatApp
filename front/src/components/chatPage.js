@@ -85,6 +85,13 @@ function ChatPage() {
         });
       };
 
+
+      useEffect(() => {
+        // first connect the user to the back
+        socket.emit('authenticate', id); 
+      }, []);
+
+
       useEffect(() => {
         const newViewedMessageIds = [];
         messages.forEach(message => {
@@ -99,13 +106,6 @@ function ChatPage() {
 
       }, [messages]);
 
-
-
-      useEffect(() => {
-        // Authenticate user upon component mount
-        socket.emit('authenticate', id); 
-      }, []);
-
       useEffect(() => {
         socket.on('message', (message) => {
 
@@ -117,8 +117,7 @@ function ChatPage() {
                 console.log("message.senderId === id", message.senderId === id);
                 console.log("message.senderId === recipient", message.senderId === recipient);
 
-                if((message.recipientId === id || message.senderId === recipient || message.senderId === id) && !found){
-                    console.log('inn if fond set messages in line 118', messages);
+                if(( message.senderId === recipient || message.senderId === id) && !found){
                     return [...prevMessageState, message];
                 }
                 return prevMessageState;
@@ -140,12 +139,7 @@ function ChatPage() {
 
       useEffect(() => {
         socket.on('modifyMessageViewed', handleModifyMessageViewed);
-      
-        // Clean up on component unmount
-        // return () => {
-        //   socket.off('modifyMessageViewed');
-        // };
-      }, []); // Only re-run the effect if `socket` changes
+      }, []); 
 
 
 
